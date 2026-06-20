@@ -43,6 +43,12 @@ dependencies:
   path: ^1.9.0
   # Provider for app-level state (vault session).
   provider: ^6.1.2
+  # Per-platform app storage location (vault default path on Android).
+  path_provider: ^2.1.4
+  # File import picker (desktop + Android).
+  file_picker: ^8.1.4
+  # Camera capture / system document scan for Android import (PRD §12 Iter 4).
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

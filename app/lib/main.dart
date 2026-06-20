@@ -1,8 +1,13 @@
 // Arken — Iteration 1 (codename "Amber"): encrypted vault core, desktop
 // first. Outcome (PRD §12): create a vault, add a file from disk, see it in
-// a list, lock and reopen it. The three-pane desktop layout, pickers, and
-// previews land in Iteration 2.
+// a list, lock and reopen it. The three-pane desktop layout and previews land
+// in a later UI pass; Iteration 4 (codename "Diamond") adds Android with
+// file/camera pickers in place of typed file paths.
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 
 import 'src/vault/models.dart';
 import 'src/vault/vault.dart';
@@ -24,6 +29,7 @@ class ArkenApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF267A7B), // Ambersky aqua-600 (§8.6)
         ),
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       home: const VaultHomePage(),
     );
@@ -42,9 +48,26 @@ class _VaultHomePageState extends State<VaultHomePage> {
   String? _error;
   bool _busy = false;
 
-  final _pathController = TextEditingController(text: 'arken_vault');
+  final _pathController = TextEditingController();
   final _passwordController = TextEditingController();
   String _rootFolderId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _initDefaultVaultPath();
+  }
+
+  /// On Android there's no meaningful path for a user to type, so default to
+  /// a vault folder under the app's own documents directory (still editable
+  /// for desktop users who want a custom location).
+  Future<void> _initDefaultVaultPath() async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    if (!mounted) return;
+    setState(() {
+      _pathController.text = p.join(docsDir.path, 'arken_vault');
+    });
+  }
 
   Future<void> _withBusy(Future<void> Function() action) async {
     setState(() {
@@ -108,6 +131,20 @@ class _VaultHomePageState extends State<VaultHomePage> {
         await vault.save();
         setState(() {});
       });
+
+  Future<void> _pickAndImportFile() async {
+    final result = await FilePicker.platform.pickFiles();
+    final path = result?.files.single.path;
+    if (path != null) await _addFile(path);
+  }
+
+  /// Capture via camera, or a system document scan on platforms that route
+  /// it through the same picker (PRD §12 Iteration 4 "capture via camera /
+  /// system document scan").
+  Future<void> _captureAndImport() async {
+    final photo = await ImagePicker().pickImage(source: ImageSource.camera);
+    if (photo != null) await _addFile(photo.path);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -204,13 +241,18 @@ class _VaultHomePageState extends State<VaultHomePage> {
           child: Row(
             children: [
               Expanded(
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'File path to import',
-                    border: OutlineInputBorder(),
-                    hintText: '/path/to/document.pdf',
-                  ),
-                  onSubmitted: _busy ? null : _addFile,
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : _pickAndImportFile,
+                  icon: const Icon(Icons.upload_file_outlined),
+                  label: const Text('Import file'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _busy ? null : _captureAndImport,
+                  icon: const Icon(Icons.camera_alt_outlined),
+                  label: const Text('Scan / camera'),
                 ),
               ),
             ],

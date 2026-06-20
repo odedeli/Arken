@@ -48,7 +48,11 @@ via an optional Google Drive sync of the vault file. See PRD §1–§5.
       (text, mimeType, tag, date range, favourites/archive) and input-mask
       validation for custom fields done in `VaultIndex`/`FieldDefinition`.
       PDF text extraction + FTS5 indexing not yet implemented.
-- [ ] Iteration 4 — Android build
+- [~] Iteration 4 — Android build. Platform scaffolded (`app/android/`),
+      camera permission added, file-picker/camera-capture import replaces
+      the typed-path import flow, vault path defaults to the app's
+      documents directory via `path_provider`. Not yet built/run on an
+      Android device or emulator.
 - [ ] Iteration 5 — Google Drive sync & import
 - [ ] Iteration 6 — Hardening & polish
 
