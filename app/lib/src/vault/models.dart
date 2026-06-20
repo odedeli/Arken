@@ -103,6 +103,35 @@ class FieldDefinition {
         'appliesToFolderId': appliesToFolderId,
       };
 
+  /// Validates [value] against [inputMask] (§9.3 "typed custom fields with
+  /// input masks"). A mask is a sequence of placeholders: `9` = digit,
+  /// `A` = letter, `*` = alphanumeric; any other character must match
+  /// literally (e.g. a mask of `999-99-9999` for an SSN-style number).
+  /// Returns true if there is no mask, or [value] satisfies it.
+  bool matchesInputMask(String value) {
+    final mask = inputMask;
+    if (mask == null || mask.isEmpty) return true;
+    if (value.length != mask.length) return false;
+    for (var i = 0; i < mask.length; i++) {
+      final m = mask[i];
+      final c = value[i];
+      switch (m) {
+        case '9':
+          if (!RegExp(r'\d').hasMatch(c)) return false;
+          break;
+        case 'A':
+          if (!RegExp(r'[A-Za-z]').hasMatch(c)) return false;
+          break;
+        case '*':
+          if (!RegExp(r'[A-Za-z0-9]').hasMatch(c)) return false;
+          break;
+        default:
+          if (c != m) return false;
+      }
+    }
+    return true;
+  }
+
   factory FieldDefinition.fromJson(Map<String, dynamic> json) => FieldDefinition(
         id: json['id'] as String,
         name: json['name'] as String,

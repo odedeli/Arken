@@ -198,4 +198,64 @@ class VaultIndex {
       entry.modifiedDate = DateTime.now().toUtc();
     }
   }
+
+  // --- Search & filters (Iteration 3, PRD §12 "quick search and filters") ---
+
+  /// Returns entries matching every given criterion. [query] matches
+  /// case-insensitively against title, notes and OCR text (substring match;
+  /// a stand-in for FTS5 until documents are indexed in a real search
+  /// engine). All other filters are AND-ed together; tagIds requires an
+  /// entry to have every listed tag.
+  List<Entry> search({
+    String? query,
+    String? mimeType,
+    List<String> tagIds = const [],
+    String? folderId,
+    DateTime? dateFrom,
+    DateTime? dateTo,
+    bool? favouritesOnly,
+    bool includeArchived = false,
+  }) {
+    final needle = query?.trim().toLowerCase();
+    return entries.where((e) {
+      if (!includeArchived && e.isArchived) return false;
+      if (favouritesOnly == true && !e.isFavourite) return false;
+      if (mimeType != null && e.mimeType != mimeType) return false;
+      if (folderId != null && e.folderId != folderId) return false;
+      if (tagIds.isNotEmpty && !tagIds.every(e.tagIds.contains)) return false;
+      final docDate = e.documentDate ?? e.addedDate;
+      if (dateFrom != null && docDate.isBefore(dateFrom)) return false;
+      if (dateTo != null && docDate.isAfter(dateTo)) return false;
+      if (needle != null && needle.isNotEmpty) {
+        final haystack = [e.title, e.notes, e.ocrText ?? '']
+            .join(' ')
+            .toLowerCase();
+        if (!haystack.contains(needle)) return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  List<Entry> get favourites =>
+      entries.where((e) => e.isFavourite && !e.isArchived).toList();
+
+  List<Entry> get archived => entries.where((e) => e.isArchived).toList();
+
+  void setFavourite(String entryId, bool value) {
+    final entry = entryById(entryId);
+    if (entry == null) {
+      throw ArgumentError('No entry with id $entryId');
+    }
+    entry.isFavourite = value;
+    entry.modifiedDate = DateTime.now().toUtc();
+  }
+
+  void setArchived(String entryId, bool value) {
+    final entry = entryById(entryId);
+    if (entry == null) {
+      throw ArgumentError('No entry with id $entryId');
+    }
+    entry.isArchived = value;
+    entry.modifiedDate = DateTime.now().toUtc();
+  }
 }

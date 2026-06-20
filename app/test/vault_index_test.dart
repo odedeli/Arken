@@ -138,4 +138,115 @@ void main() {
       expect(entry.tagIds, isEmpty);
     });
   });
+
+  group('VaultIndex search & filters', () {
+    VaultIndex buildIndex() {
+      final index = VaultIndex.empty();
+      final folder = index.addFolder('Home');
+      final tag = index.addTag('Urgent');
+      index.addEntry(Entry(
+        title: 'Electricity bill',
+        folderId: folder.id,
+        fileName: 'elec.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 10,
+        checksum: 'a',
+        notes: 'Quarterly invoice',
+        documentDate: DateTime.utc(2026, 1, 10),
+        tagIds: [tag.id],
+      ));
+      index.addEntry(Entry(
+        title: 'Passport scan',
+        folderId: folder.id,
+        fileName: 'passport.jpg',
+        mimeType: 'image/jpeg',
+        fileSize: 5,
+        checksum: 'b',
+        documentDate: DateTime.utc(2025, 6, 1),
+        isFavourite: true,
+      ));
+      index.addEntry(Entry(
+        title: 'Old receipt',
+        folderId: folder.id,
+        fileName: 'receipt.pdf',
+        mimeType: 'application/pdf',
+        fileSize: 3,
+        checksum: 'c',
+        isArchived: true,
+      ));
+      return index;
+    }
+
+    test('search by text matches title and notes, excludes archived by default', () {
+      final index = buildIndex();
+      final results = index.search(query: 'invoice');
+      expect(results.map((e) => e.title), ['Electricity bill']);
+    });
+
+    test('search by mimeType filters correctly', () {
+      final index = buildIndex();
+      final results = index.search(mimeType: 'image/jpeg');
+      expect(results.map((e) => e.title), ['Passport scan']);
+    });
+
+    test('search by tag requires all listed tags', () {
+      final index = buildIndex();
+      final tagId = index.tags.single.id;
+      final results = index.search(tagIds: [tagId]);
+      expect(results.map((e) => e.title), ['Electricity bill']);
+    });
+
+    test('search by date range filters on documentDate', () {
+      final index = buildIndex();
+      final results = index.search(
+        dateFrom: DateTime.utc(2026, 1, 1),
+        dateTo: DateTime.utc(2026, 12, 31),
+      );
+      expect(results.map((e) => e.title), ['Electricity bill']);
+    });
+
+    test('favouritesOnly returns only favourites and excludes archived', () {
+      final index = buildIndex();
+      final results = index.search(favouritesOnly: true);
+      expect(results.map((e) => e.title), ['Passport scan']);
+    });
+
+    test('includeArchived surfaces archived entries', () {
+      final index = buildIndex();
+      final results = index.search(includeArchived: true);
+      expect(results.length, 3);
+    });
+
+    test('favourites and archived getters', () {
+      final index = buildIndex();
+      expect(index.favourites.map((e) => e.title), ['Passport scan']);
+      expect(index.archived.map((e) => e.title), ['Old receipt']);
+    });
+
+    test('setFavourite and setArchived toggle flags', () {
+      final index = buildIndex();
+      final entry = index.entries.first;
+      index.setFavourite(entry.id, true);
+      expect(entry.isFavourite, isTrue);
+      index.setArchived(entry.id, true);
+      expect(entry.isArchived, isTrue);
+    });
+  });
+
+  group('FieldDefinition input masks', () {
+    test('matches digit, letter and alphanumeric placeholders', () {
+      final field = FieldDefinition(
+        name: 'SSN',
+        type: FieldType.text,
+        inputMask: '999-99-9999',
+      );
+      expect(field.matchesInputMask('123-45-6789'), isTrue);
+      expect(field.matchesInputMask('12-345-6789'), isFalse);
+    });
+
+    test('no mask always matches', () {
+      final field = FieldDefinition(name: 'Note', type: FieldType.text);
+      expect(field.matchesInputMask('anything'), isTrue);
+    });
+  });
 }
