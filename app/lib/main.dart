@@ -3,12 +3,16 @@
 // a list, lock and reopen it. The three-pane desktop layout and previews land
 // in a later UI pass; Iteration 4 (codename "Diamond") adds Android with
 // file/camera pickers in place of typed file paths.
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'src/sync/drive_sync_planner.dart';
+import 'src/sync/drive_vault_sync.dart';
 import 'src/vault/models.dart';
 import 'src/vault/vault.dart';
 import 'src/vault/vault_format.dart';
@@ -146,6 +150,54 @@ class _VaultHomePageState extends State<VaultHomePage> {
     if (photo != null) await _addFile(photo.path);
   }
 
+  /// Syncs the vault directory to/from Google Drive (PRD §12 Iteration 5).
+  /// On conflict (both sides changed since the last sync), asks the user
+  /// which copy should win rather than guessing.
+  Future<void> _syncWithDrive() => _withBusy(() async {
+        final account = await DriveVaultSync.signIn();
+        if (account == null) return; // user cancelled sign-in
+        final vaultDir = Directory(_pathController.text);
+        try {
+          final action = await DriveVaultSync.sync(account, vaultDir);
+          if (action == SyncAction.downloadRemote) {
+            // The on-disk vault changed under us; reopen it so the UI and
+            // in-memory key/index reflect what's now on disk.
+            await _openVault();
+          }
+        } on DriveSyncConflictException {
+          if (!mounted) return;
+          final keepLocal = await _resolveSyncConflict();
+          if (keepLocal == null) return;
+          if (keepLocal) {
+            await DriveVaultSync.forceUpload(account, vaultDir);
+          } else {
+            await DriveVaultSync.forceDownload(account, vaultDir);
+            await _openVault();
+          }
+        }
+      });
+
+  Future<bool?> _resolveSyncConflict() => showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Sync conflict'),
+          content: const Text(
+            'This vault changed both here and on Drive since the last sync. '
+            'Which copy should be kept?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Keep Drive copy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Keep this device'),
+            ),
+          ],
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
     final vault = _vault;
@@ -153,6 +205,12 @@ class _VaultHomePageState extends State<VaultHomePage> {
       appBar: AppBar(
         title: const Text('Arken'),
         actions: [
+          if (vault != null)
+            IconButton(
+              icon: const Icon(Icons.cloud_sync_outlined),
+              tooltip: 'Sync with Google Drive',
+              onPressed: _busy ? null : _syncWithDrive,
+            ),
           if (vault != null)
             IconButton(
               icon: const Icon(Icons.lock_outline),

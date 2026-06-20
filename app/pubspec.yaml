@@ -49,6 +49,11 @@ dependencies:
   file_picker: ^8.1.4
   # Camera capture / system document scan for Android import (PRD §12 Iter 4).
   image_picker: ^1.1.2
+  # Google Drive sync & import (PRD §12 Iter 5).
+  google_sign_in: ^6.2.2
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

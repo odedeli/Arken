@@ -53,7 +53,14 @@ via an optional Google Drive sync of the vault file. See PRD §1–§5.
       the typed-path import flow, vault path defaults to the app's
       documents directory via `path_provider`. Not yet built/run on an
       Android device or emulator.
-- [ ] Iteration 5 — Google Drive sync & import
+- [~] Iteration 5 — Google Drive sync & import. Conflict-detection planner
+      (`app/lib/src/sync/drive_sync_planner.dart`, unit-tested) and the
+      upload/download sync engine (`drive_vault_sync.dart`) are implemented,
+      with a "Sync with Drive" action and manual conflict-resolution dialog
+      in `main.dart`. Drive's own file picker for importing documents (vs.
+      syncing the vault itself), and any live testing against real Drive
+      OAuth credentials, are not done — needs a Google Cloud project set up
+      by the project owner.
 - [ ] Iteration 6 — Hardening & polish
 
 ## Running
