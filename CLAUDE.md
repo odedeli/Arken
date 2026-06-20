@@ -41,9 +41,13 @@ via an optional Google Drive sync of the vault file. See PRD §1–§5.
       data layer, minimal UI to import a file and see it listed. Scaffolded
       in `app/`; see `app/lib/src/vault/`.
 - [~] Iteration 2 — Capture, organise & view. Folder/tag/move data-layer ops
-      done in `VaultIndex` (`app/lib/src/vault/vault_index.dart`). Three-pane
-      UI + file-picker import + folder/tag management UI, and in-app
-      preview/open/export, are not yet implemented — deferred.
+      done in `VaultIndex` (`app/lib/src/vault/vault_index.dart`). UI is now
+      done: `LibraryView` (`app/lib/src/ui/library_view.dart`) gives a
+      responsive sidebar+entry-list layout (Drawer below 700px width),
+      folder/tag CRUD dialogs, search/filter wired to `VaultIndex.search()`,
+      and favourite/archive/move-to-folder/tag-management controls per entry;
+      covered by `app/test/library_view_test.dart`. In-app preview/open/export
+      is not yet implemented — still deferred.
 - [~] Iteration 3 — Search & metadata depth. In-memory search/filter API
       (text, mimeType, tag, date range, favourites/archive) and input-mask
       validation for custom fields done in `VaultIndex`/`FieldDefinition`.

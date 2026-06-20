@@ -13,7 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'src/sync/drive_sync_planner.dart';
 import 'src/sync/drive_vault_sync.dart';
-import 'src/vault/models.dart';
+import 'src/ui/library_view.dart';
 import 'src/vault/vault.dart';
 import 'src/vault/vault_format.dart';
 
@@ -291,62 +291,12 @@ class _VaultHomePageState extends State<VaultHomePage> {
   }
 
   Widget _buildLibraryView(Vault vault) {
-    final entries = vault.index.entries;
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: _busy ? null : _pickAndImportFile,
-                  icon: const Icon(Icons.upload_file_outlined),
-                  label: const Text('Import file'),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _busy ? null : _captureAndImport,
-                  icon: const Icon(Icons.camera_alt_outlined),
-                  label: const Text('Scan / camera'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              _error!,
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        Expanded(
-          child: entries.isEmpty
-              ? const Center(child: Text('No documents yet. Import one above.'))
-              : ListView.builder(
-                  itemCount: entries.length,
-                  itemBuilder: (context, i) => _EntryTile(entry: entries[i]),
-                ),
-        ),
-      ],
-    );
-  }
-}
-
-class _EntryTile extends StatelessWidget {
-  final Entry entry;
-  const _EntryTile({required this.entry});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: const Icon(Icons.insert_drive_file_outlined),
-      title: Text(entry.title),
-      subtitle: Text('${entry.fileName} · ${entry.fileSize} bytes'),
+    return LibraryView(
+      vault: vault,
+      busy: _busy,
+      topError: _error,
+      onImportFile: _pickAndImportFile,
+      onCaptureFile: _captureAndImport,
     );
   }
 }
