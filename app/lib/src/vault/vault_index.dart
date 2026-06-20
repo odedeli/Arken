@@ -79,4 +79,123 @@ class VaultIndex {
     }
     return null;
   }
+
+  void removeEntry(String id) => entries.removeWhere((e) => e.id == id);
+
+  // --- Folder management (Iteration 2, PRD §6.6 "organise into folders") ---
+
+  Folder? folderById(String id) {
+    for (final f in folders) {
+      if (f.id == id) return f;
+    }
+    return null;
+  }
+
+  void renameFolder(String id, String newName) {
+    final folder = folderById(id);
+    if (folder == null) {
+      throw ArgumentError('No folder with id $id');
+    }
+    folder.name = newName;
+  }
+
+  /// Deletes a folder, reassigning its subfolders and entries to
+  /// [moveContentsTo] (defaulting to the deleted folder's own parent, i.e.
+  /// "promote contents up one level"). Throws if the folder has entries and
+  /// there is nowhere to move them to (e.g. deleting an empty-parent root).
+  void deleteFolder(String id, {String? moveContentsTo}) {
+    final folder = folderById(id);
+    if (folder == null) return;
+    final target = moveContentsTo ?? folder.parentId;
+
+    final hasEntries = entries.any((e) => e.folderId == id);
+    if (hasEntries && target == null) {
+      throw StateError(
+        'Cannot delete folder "${folder.name}": it has entries and no '
+        'destination folder was given.',
+      );
+    }
+
+    for (final f in folders.where((f) => f.parentId == id)) {
+      f.parentId = target;
+    }
+    for (final e in entries.where((e) => e.folderId == id)) {
+      e.folderId = target!;
+      e.modifiedDate = DateTime.now().toUtc();
+    }
+    folders.removeWhere((f) => f.id == id);
+  }
+
+  void moveEntry(String entryId, String folderId) {
+    final entry = entryById(entryId);
+    if (entry == null) {
+      throw ArgumentError('No entry with id $entryId');
+    }
+    entry.folderId = folderId;
+    entry.modifiedDate = DateTime.now().toUtc();
+  }
+
+  // --- Tag management (Iteration 2, PRD §6.7 "tag documents") ---
+
+  Tag? tagById(String id) {
+    for (final t in tags) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  void renameTag(String id, String newName) {
+    final tag = tagById(id);
+    if (tag == null) {
+      throw ArgumentError('No tag with id $id');
+    }
+    tag.name = newName;
+  }
+
+  /// Removes [id] from every entry that has it, and from the tag list.
+  void deleteTag(String id) {
+    for (final entry in entries) {
+      if (entry.tagIds.remove(id)) {
+        entry.modifiedDate = DateTime.now().toUtc();
+      }
+    }
+    tags.removeWhere((t) => t.id == id);
+  }
+
+  /// Folds [sourceTagIds] into [targetTagId]: every entry tagged with a
+  /// source tag is retagged to the target (without duplicating it), then the
+  /// source tags are removed from the vault.
+  void mergeTags(List<String> sourceTagIds, String targetTagId) {
+    for (final entry in entries) {
+      final hadSource = entry.tagIds.any(sourceTagIds.contains);
+      if (!hadSource) continue;
+      entry.tagIds = entry.tagIds.where((t) => !sourceTagIds.contains(t)).toList();
+      if (!entry.tagIds.contains(targetTagId)) {
+        entry.tagIds.add(targetTagId);
+      }
+      entry.modifiedDate = DateTime.now().toUtc();
+    }
+    tags.removeWhere((t) => sourceTagIds.contains(t.id));
+  }
+
+  void addTagToEntry(String entryId, String tagId) {
+    final entry = entryById(entryId);
+    if (entry == null) {
+      throw ArgumentError('No entry with id $entryId');
+    }
+    if (!entry.tagIds.contains(tagId)) {
+      entry.tagIds.add(tagId);
+      entry.modifiedDate = DateTime.now().toUtc();
+    }
+  }
+
+  void removeTagFromEntry(String entryId, String tagId) {
+    final entry = entryById(entryId);
+    if (entry == null) {
+      throw ArgumentError('No entry with id $entryId');
+    }
+    if (entry.tagIds.remove(tagId)) {
+      entry.modifiedDate = DateTime.now().toUtc();
+    }
+  }
 }
